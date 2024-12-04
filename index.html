@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRON Snake</title>
+    <style>
+        @keyframes circuitPulse {
+            0% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+            100% { opacity: 0.3; }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            width: 100%;
+            margin: 0;
+            background-color: #000;
+            font-family: 'Arial', sans-serif;
+            color: #00f3ff;
+            position: relative;
+            overflow-x: hidden;
+            padding: 20px;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                linear-gradient(90deg, transparent 95%, rgba(0, 243, 255, 0.1) 95%),
+                linear-gradient(transparent 95%, rgba(0, 243, 255, 0.1) 95%);
+            background-size: 20px 20px;
+            z-index: -1;
+            animation: circuitPulse 4s infinite;
+        }
+
+        .circuit-lines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -2;
+            opacity: 0.15;
+            background: 
+                radial-gradient(circle at 50% 50%, transparent 80%, rgba(0, 243, 255, 0.2) 100%),
+                linear-gradient(45deg, transparent 45%, rgba(0, 243, 255, 0.2) 45%, rgba(0, 243, 255, 0.2) 55%, transparent 55%),
+                linear-gradient(-45deg, transparent 45%, rgba(0, 243, 255, 0.2) 45%, rgba(0, 243, 255, 0.2) 55%, transparent 55%);
+            background-size: 100% 100%, 50px 50px, 50px 50px;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: rgba(0, 243, 255, 0.05);
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.1);
+            position: relative;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1;
+            border: 2px solid #00f3ff;
+            background-color: rgba(0, 0, 0, 0.9);
+            box-shadow: 0 0 20px #00f3ff, inset 0 0 20px rgba(0, 243, 255, 0.5);
+            border-radius: 5px;
+            position: relative;
+        }
+
+        .score {
+            font-size: clamp(20px, 4vw, 28px);
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #00f3ff;
+            font-weight: bold;
+            letter-spacing: 2px;
+            position: relative;
+            padding: 10px 20px;
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            border-radius: 4px;
+            background: rgba(0, 243, 255, 0.1);
+            text-align: center;
+        }
+
+        .instructions {
+            margin-top: 20px;
+            text-align: center;
+            color: #0088ff;
+            text-shadow: 0 0 5px #0088ff;
+            letter-spacing: 1px;
+            padding: 15px;
+            border: 1px solid rgba(0, 136, 255, 0.3);
+            border-radius: 4px;
+            background: rgba(0, 136, 255, 0.1);
+            font-size: clamp(14px, 3vw, 16px);
+        }
+
+        .game-title {
+            font-size: clamp(32px, 6vw, 48px);
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            text-shadow: 0 0 20px #00f3ff;
+            position: relative;
+            padding: 20px 40px;
+            border-bottom: 2px solid rgba(0, 243, 255, 0.3);
+            text-align: center;
+            width: 100%;
+            white-space: nowrap;
+        }
+
+        .game-title::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40%;
+            height: 2px;
+            background: #00f3ff;
+            box-shadow: 0 0 10px #00f3ff;
+        }
+
+        /* Change mobile controls to game controls and show on all screens */
+        .game-controls {
+            display: grid;
+            width: 100%;
+            max-width: 300px;
+            margin: 20px auto 0;
+            grid-template-areas:
+                ". up ."
+                "left . right"
+                ". down .";
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            border-radius: 50%;
+            color: #00f3ff;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(0, 243, 255, 0.2);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+        }
+
+        .control-btn:active {
+            background: rgba(0, 243, 255, 0.3);
+            transform: scale(0.95);
+        }
+
+        .control-btn .key-hint {
+            position: absolute;
+            font-size: 12px;
+            opacity: 0.7;
+            transform: translateY(20px);
+        }
+
+        #up-btn { grid-area: up; }
+        #down-btn { grid-area: down; }
+        #left-btn { grid-area: left; }
+        #right-btn { grid-area: right; }
+
+        .pause-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 243, 255, 0.1);
+            border: 2px solid #00f3ff;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+        }
+
+        .pause-button:hover {
+            background: rgba(0, 243, 255, 0.2);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+        }
+
+        .pause-button:active {
+            transform: scale(0.95);
+        }
+
+        .pause-button .icon {
+            width: 20px;
+            height: 20px;
+            position: relative;
+        }
+
+        .pause-button .pause-icon::before,
+        .pause-button .pause-icon::after {
+            content: '';
+            position: absolute;
+            width: 6px;
+            height: 20px;
+            background: #00f3ff;
+            box-shadow: 0 0 5px #00f3ff;
+            transition: all 0.3s ease;
+        }
+
+        .pause-button .pause-icon::before {
+            left: 4px;
+        }
+
+        .pause-button .pause-icon::after {
+            right: 4px;
+        }
+
+        .pause-button .play-icon {
+            display: none;
+        }
+
+        .pause-button .play-icon::before {
+            content: '';
+            position: absolute;
+            left: 7px;
+            width: 0;
+            height: 0;
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+            border-left: 15px solid #00f3ff;
+            filter: drop-shadow(0 0 5px #00f3ff);
+            transition: all 0.3s ease;
+        }
+
+        .pause-button.paused .pause-icon {
+            display: none;
+        }
+
+        .pause-button.paused .play-icon {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .game-container {
+                padding: 10px;
+            }
+
+            .game-title {
+                padding: 15px 20px;
+                letter-spacing: 4px;
+            }
+
+            .control-btn .key-hint {
+                display: none;
+            }
+
+            .pause-button {
+                top: 10px;
+                right: 10px;
+                width: 40px;
+                height: 40px;
+            }
+
+            .pause-button .icon {
+                width: 16px;
+                height: 16px;
+            }
+
+            .pause-button .pause-icon::before,
+            .pause-button .pause-icon::after {
+                width: 4px;
+                height: 16px;
+            }
+
+            .pause-button .play-icon::before {
+                left: 6px;
+                border-top: 8px solid transparent;
+                border-bottom: 8px solid transparent;
+                border-left: 12px solid #00f3ff;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="circuit-lines"></div>
+    <div class="game-title">TRON SNAKE</div>
+    <div class="game-container">
+        <div class="score">SCORE: <span id="score">0</span></div>
+        <button class="pause-button" id="pauseButton">
+            <div class="icon pause-icon"></div>
+            <div class="icon play-icon"></div>
+        </button>
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        <div class="instructions">
+            USE ARROW KEYS OR BUTTONS TO NAVIGATE<br>
+            PRESS SPACE OR PAUSE BUTTON TO PAUSE
+        </div>
+        <div class="game-controls">
+            <button class="control-btn" id="up-btn">⯅<span class="key-hint">↑</span></button>
+            <button class="control-btn" id="down-btn">⯆<span class="key-hint">↓</span></button>
+            <button class="control-btn" id="left-btn">⯇<span class="key-hint">←</span></button>
+            <button class="control-btn" id="right-btn">⯈<span class="key-hint">→</span></button>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html> 
